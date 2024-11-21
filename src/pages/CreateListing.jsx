@@ -2,6 +2,7 @@ import { useState, useEffec, useRef, useEffect } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import Spinner from "../components/Spinner";
+import { toast } from "react-toastify";
 
 function CreateListing() {
   const [geolocationEnabled, setGeolocationEnabled] = useState(true);
@@ -59,9 +60,53 @@ function CreateListing() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted]);
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
+
+    setLoading(true);
+
+    if (discountedPrice > 6) {
+      setLoading(false);
+      toast.error("Max 6 images");
+      return;
+    }
+
+    if (images.length >= regularPrice) {
+      setLoading(false);
+      toast.error("Discounted price needs to be less that regular price");
+      return;
+    }
+
+    let geolocation = {};
+    let location;
+
+    if (geolocationEnabled) {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.REACT_APP_GEOCODE_API_KEY}`
+      );
+
+      const data = await response.json();
+
+      geolocation.lat = data.results[0]?.geometry.location.lat ?? 0;
+      geolocation.lng = data.results[0]?.geometry.location.lng ?? 0;
+
+      location =
+        data.status === "ZERO_RESULTS"
+          ? undefined
+          : data.results[0]?.formatted_address;
+
+      if (location === undefined || location.includes("undefined")) {
+        setLoading(false);
+        toast.error("Please enter a correct address");
+        return;
+      }
+    } else {
+      geolocation.lat = latitude;
+      geolocation.lng = longitude;
+      location = address;
+    }
+
+    setLoading(false);
   };
 
   const onMutate = (e) => {
@@ -107,7 +152,7 @@ function CreateListing() {
           <div className='formButtons'>
             <button
               type='button'
-              className={type == "sale" ? "formButtonActive" : "formButton"}
+              className={type === "sale" ? "formButtonActive" : "formButton"}
               id='type'
               value='sale'
               onClick={onMutate}
@@ -116,7 +161,7 @@ function CreateListing() {
             </button>
             <button
               type='button'
-              className={type == "rent" ? "formButtonActive" : "formButton"}
+              className={type === "rent" ? "formButtonActive" : "formButton"}
               id='type'
               value='rent'
               onClick={onMutate}
