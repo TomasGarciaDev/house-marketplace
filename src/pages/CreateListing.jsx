@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import {
   getStorage,
@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from "uuid";
 import Spinner from "../components/Spinner";
 
 function CreateListing() {
+  // eslint-disable-next-line
   const [geolocationEnabled, setGeolocationEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -50,7 +51,7 @@ function CreateListing() {
 
   const auth = getAuth();
   const navigate = useNavigate();
-  const isMounted = useRef();
+  const isMounted = useRef(true);
 
   useEffect(() => {
     if (isMounted) {
@@ -76,7 +77,7 @@ function CreateListing() {
 
     if (discountedPrice >= regularPrice) {
       setLoading(false);
-      toast.error("Discounted price needs to be less that regular price");
+      toast.error("Discounted price needs to be less than regular price");
       return;
     }
 
@@ -112,7 +113,6 @@ function CreateListing() {
     } else {
       geolocation.lat = latitude;
       geolocation.lng = longitude;
-      location = address;
     }
 
     // Store image in firebase
@@ -121,7 +121,7 @@ function CreateListing() {
         const storage = getStorage();
         const fileName = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`;
 
-        const storageRef = ref(storage, "images/", fileName);
+        const storageRef = ref(storage, "images/" + fileName);
 
         const uploadTask = uploadBytesResumable(storageRef, image);
 
@@ -146,6 +146,8 @@ function CreateListing() {
             reject(error);
           },
           () => {
+            // Handle successful uploads on complete
+            // For instance, get the download URL: https://firebasestorage.googleapis.com/...
             getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
               resolve(downloadURL);
             });
@@ -176,7 +178,7 @@ function CreateListing() {
 
     const docRef = await addDoc(collection(db, "listings"), formDataCopy);
     setLoading(false);
-    toast.success("Lisitng saved");
+    toast.success("Listing saved");
     navigate(`/category/${formDataCopy.type}/${docRef.id}`);
   };
 
@@ -440,7 +442,6 @@ function CreateListing() {
             multiple
             required
           />
-
           <button type='submit' className='primaryButton createListingButton'>
             Create Listing
           </button>
