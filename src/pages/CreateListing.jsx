@@ -6,6 +6,7 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from "firebase/storage";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase.config";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -73,15 +74,15 @@ function CreateListing() {
 
     setLoading(true);
 
-    if (discountedPrice > 6) {
+    if (discountedPrice >= regularPrice) {
       setLoading(false);
-      toast.error("Max 6 images");
+      toast.error("Discounted price needs to be less that regular price");
       return;
     }
 
-    if (images.length >= regularPrice) {
+    if (images.length > 6) {
       setLoading(false);
-      toast.error("Discounted price needs to be less that regular price");
+      toast.error("Max 6 images");
       return;
     }
 
@@ -153,7 +154,7 @@ function CreateListing() {
       });
     };
 
-    const imgUrls = await Promise.all(
+    const imageUrls = await Promise.all(
       [...images].map((image) => storeImage(image))
     ).catch(() => {
       setLoading(false);
@@ -161,8 +162,22 @@ function CreateListing() {
       return;
     });
 
-    console.log(imgUrls);
+    const formDataCopy = {
+      ...formData,
+      imageUrls,
+      geolocation,
+      timestamp: serverTimestamp(),
+    };
+
+    delete formDataCopy.images;
+    delete formDataCopy.address;
+    location && (formDataCopy.location = location);
+    !formDataCopy.offer && delete formDataCopy.discountedPrice;
+
+    const docRef = await addDoc(collection(db, "listings"), formDataCopy);
     setLoading(false);
+    toast.success("Lisitng saved");
+    navigate(`/category/${formDataCopy.type}/${docRef.id}`);
   };
 
   const onMutate = (e) => {
