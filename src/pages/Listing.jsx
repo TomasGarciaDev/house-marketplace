@@ -38,8 +38,6 @@ function Listing() {
     return <Spinner />;
   }
 
-  console.log("listing", listing.imageUrls);
-
   return (
     <main>
       <Swiper
